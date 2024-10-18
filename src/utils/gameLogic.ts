@@ -26,7 +26,17 @@ export async function predictNumbers(input: number[]): Promise<number[]> {
   const result = Array.from(await prediction.data());
   inputTensor.dispose();
   prediction.dispose();
-  return result.map(n => Math.round(n * 24) + 1);
+  
+  // Modificação para garantir números únicos
+  const uniqueNumbers = new Set<number>();
+  while (uniqueNumbers.size < 15) {
+    const num = Math.round(result[uniqueNumbers.size] * 24) + 1;
+    if (!uniqueNumbers.has(num)) {
+      uniqueNumbers.add(num);
+    }
+  }
+  
+  return Array.from(uniqueNumbers);
 }
 
 export function processCSV(text: string): number[][] {
