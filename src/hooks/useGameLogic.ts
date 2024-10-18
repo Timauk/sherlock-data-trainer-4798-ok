@@ -5,6 +5,7 @@ interface Player {
   id: number;
   score: number;
   predictions: number[];
+  weights: number[];
 }
 
 export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
@@ -14,13 +15,14 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
   const [concursoNumber, setConcursoNumber] = useState(0);
   const [isInfiniteMode, setIsInfiniteMode] = useState(false);
-  const [neuralNetworkVisualization, setNeuralNetworkVisualization] = useState<{ input: number[], output: number[] } | null>(null);
+  const [neuralNetworkVisualization, setNeuralNetworkVisualization] = useState<{ input: number[], output: number[], weights: number[][] } | null>(null);
 
   const initializePlayers = useCallback(() => {
     const newPlayers = Array.from({ length: 10 }, (_, i) => ({
       id: i + 1,
       score: 0,
-      predictions: []
+      predictions: [],
+      weights: Array.from({ length: 17 }, () => Math.floor(Math.random() * 1001))
     }));
     setPlayers(newPlayers);
   }, []);
@@ -29,16 +31,15 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     initializePlayers();
   }, [initializePlayers]);
 
-  const makePrediction = (inputData: number[]): number[] => {
+  const makePrediction = (inputData: number[], playerWeights: number[]): number[] => {
     if (!trainedModel) return [];
     
-    // Ensure the input shape is correct (15 numbers + normalized concursoNumber + normalized dataSorteio)
-    const normalizedConcursoNumber = concursoNumber / 3184; // Assuming 3184 is the max concurso number
-    const normalizedDataSorteio = Date.now() / (1000 * 60 * 60 * 24 * 365); // Normalize to years since 1970
+    const normalizedConcursoNumber = concursoNumber / 3184;
+    const normalizedDataSorteio = Date.now() / (1000 * 60 * 60 * 24 * 365);
     const input = [...inputData, normalizedConcursoNumber, normalizedDataSorteio];
     
-    // Reshape the input to match the expected shape [1, 17]
-    const inputTensor = tf.tensor2d([input], [1, 17]);
+    const weightedInput = input.map((value, index) => value * (playerWeights[index] / 1000));
+    const inputTensor = tf.tensor2d([weightedInput], [1, 17]);
     
     const predictions = trainedModel.predict(inputTensor) as tf.Tensor;
     const result = Array.from(predictions.dataSync());
@@ -46,9 +47,8 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     inputTensor.dispose();
     predictions.dispose();
     
-    setNeuralNetworkVisualization({ input, output: result });
+    setNeuralNetworkVisualization({ input: weightedInput, output: result, weights: trainedModel.getWeights().map(w => Array.from(w.dataSync())) });
     
-    // Denormalize the output (assuming the output should be between 1 and 25)
     return result.map(num => Math.round(num * 24) + 1);
   };
 
@@ -59,7 +59,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setBoardNumbers(currentBoardNumbers);
 
     const updatedPlayers = players.map(player => {
-      const playerPredictions = makePrediction(currentBoardNumbers);
+      const playerPredictions = makePrediction(currentBoardNumbers, player.weights);
       const matches = playerPredictions.filter(num => currentBoardNumbers.includes(num)).length;
       const reward = calculateDynamicReward(matches);
       return {

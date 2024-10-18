@@ -5,6 +5,7 @@ import DataUploader from '@/components/DataUploader';
 import GameControls from '@/components/GameControls';
 import GameBoard from '@/components/GameBoard';
 import LogDisplay from '@/components/LogDisplay';
+import NeuralNetworkVisualization from '@/components/NeuralNetworkVisualization';
 import { Progress } from "@/components/ui/progress";
 import { useGameLogic } from '@/hooks/useGameLogic';
 import { Button } from "@/components/ui/button";
@@ -156,10 +157,11 @@ const PlayPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             {neuralNetworkVisualization ? (
-              <div>
-                <p>Entrada: {neuralNetworkVisualization.input.map(n => n.toFixed(2)).join(', ')}</p>
-                <p>Saída: {neuralNetworkVisualization.output.map(n => n.toFixed(2)).join(', ')}</p>
-              </div>
+              <NeuralNetworkVisualization
+                input={neuralNetworkVisualization.input}
+                output={neuralNetworkVisualization.output}
+                weights={neuralNetworkVisualization.weights}
+              />
             ) : (
               <p>Aguardando dados da rede neural...</p>
             )}
