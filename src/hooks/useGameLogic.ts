@@ -40,10 +40,8 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     
     const weightedInput = input.map((value, index) => value * (playerWeights[index] / 1000));
     
-    // Reshape the input tensor to match the expected 3D shape [batch, timesteps, features]
-    // We're using a sequence length of 10 to match the expected input shape
     const paddedInput = Array(10).fill(weightedInput);
-    const inputTensor = tf.tensor3d([paddedInput]); // Shape: [1, 10, 17]
+    const inputTensor = tf.tensor3d([paddedInput]);
     
     const predictions = trainedModel.predict(inputTensor) as tf.Tensor;
     const result = Array.from(predictions.dataSync());
@@ -51,13 +49,23 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     inputTensor.dispose();
     predictions.dispose();
     
+    // Modificação para garantir números únicos
+    const uniqueNumbers = new Set<number>();
+    while (uniqueNumbers.size < 15) {
+      const index = uniqueNumbers.size;
+      const num = Math.round(result[index % result.length] * 24) + 1;
+      if (!uniqueNumbers.has(num)) {
+        uniqueNumbers.add(num);
+      }
+    }
+    
     setNeuralNetworkVisualization({ 
       input: weightedInput, 
-      output: result, 
+      output: Array.from(uniqueNumbers), 
       weights: trainedModel.getWeights().map(w => Array.from(w.dataSync())) 
     });
     
-    return result.map(num => Math.round(num * 24) + 1);
+    return Array.from(uniqueNumbers);
   };
 
   const gameLoop = useCallback(() => {
