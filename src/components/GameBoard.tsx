@@ -15,17 +15,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ boardNumbers, concursoNumber, pla
     <div>
       <BoardDisplay numbers={boardNumbers} concursoNumber={concursoNumber} />
       <PlayerList players={players} />
-      <div className="mt-4">
-        <h3 className="text-lg font-semibold mb-2">Pontuação dos Jogadores</h3>
-        <ul className="space-y-2">
-          {players.map(player => (
-            <li key={player.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
-              <span>Jogador {player.id}</span>
-              <span className="font-bold">{player.score} pontos</span>
-            </li>
-          ))}
-        </ul>
-      </div>
       <EvolutionChart data={evolutionData} />
     </div>
   );
