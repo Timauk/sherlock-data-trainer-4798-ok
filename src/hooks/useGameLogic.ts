@@ -51,11 +51,23 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     
     // Modificação para garantir números únicos
     const uniqueNumbers = new Set<number>();
-    while (uniqueNumbers.size < 15) {
+    let attempts = 0;
+    const maxAttempts = 1000; // Prevent infinite loop
+    
+    while (uniqueNumbers.size < 15 && attempts < maxAttempts) {
       const index = uniqueNumbers.size;
       const num = Math.round(result[index % result.length] * 24) + 1;
       if (!uniqueNumbers.has(num)) {
         uniqueNumbers.add(num);
+      }
+      attempts++;
+    }
+    
+    // If we couldn't generate 15 unique numbers, fill the rest with random numbers
+    while (uniqueNumbers.size < 15) {
+      const randomNum = Math.floor(Math.random() * 25) + 1;
+      if (!uniqueNumbers.has(randomNum)) {
+        uniqueNumbers.add(randomNum);
       }
     }
     
