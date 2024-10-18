@@ -8,6 +8,7 @@ import LogDisplay from '@/components/LogDisplay';
 import { Progress } from "@/components/ui/progress";
 import { useGameLogic } from '@/hooks/useGameLogic';
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -28,7 +29,8 @@ const PlayPage: React.FC = () => {
     setIsInfiniteMode,
     initializePlayers,
     gameLoop,
-    evolveGeneration
+    evolveGeneration,
+    neuralNetworkVisualization
   } = useGameLogic(csvData, trainedModel);
 
   const addLog = useCallback((message: string) => {
@@ -117,33 +119,53 @@ const PlayPage: React.FC = () => {
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4 neon-title">SHERLOK</h2>
       
-      <DataUploader onCsvUpload={loadCSV} onModelUpload={loadModel} />
+      <div className="flex flex-wrap gap-4">
+        <div className="flex-1">
+          <DataUploader onCsvUpload={loadCSV} onModelUpload={loadModel} />
 
-      <GameControls
-        isPlaying={isPlaying}
-        onPlay={playGame}
-        onPause={pauseGame}
-        onReset={resetGame}
-        onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      />
+          <GameControls
+            isPlaying={isPlaying}
+            onPlay={playGame}
+            onPause={pauseGame}
+            onReset={resetGame}
+            onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          />
 
-      <Button onClick={toggleInfiniteMode} className="mt-2">
-        {isInfiniteMode ? 'Desativar' : 'Ativar'} Modo Infinito
-      </Button>
+          <Button onClick={toggleInfiniteMode} className="mt-2">
+            {isInfiniteMode ? 'Desativar' : 'Ativar'} Modo Infinito
+          </Button>
 
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold mb-2">Progresso da Geração {generation}</h3>
-        <Progress value={progress} className="w-full" />
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold mb-2">Progresso da Geração {generation}</h3>
+            <Progress value={progress} className="w-full" />
+          </div>
+
+          <GameBoard
+            boardNumbers={boardNumbers}
+            concursoNumber={concursoNumber}
+            players={players}
+            evolutionData={evolutionData}
+          />
+          
+          <LogDisplay logs={logs} />
+        </div>
+
+        <Card className="flex-1">
+          <CardHeader>
+            <CardTitle>Visualização da Rede Neural</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {neuralNetworkVisualization ? (
+              <div>
+                <p>Entrada: {neuralNetworkVisualization.input.map(n => n.toFixed(2)).join(', ')}</p>
+                <p>Saída: {neuralNetworkVisualization.output.map(n => n.toFixed(2)).join(', ')}</p>
+              </div>
+            ) : (
+              <p>Aguardando dados da rede neural...</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      <GameBoard
-        boardNumbers={boardNumbers}
-        concursoNumber={concursoNumber}
-        players={players}
-        evolutionData={evolutionData}
-      />
-      
-      <LogDisplay logs={logs} />
     </div>
   );
 };

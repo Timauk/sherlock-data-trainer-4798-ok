@@ -14,6 +14,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
   const [concursoNumber, setConcursoNumber] = useState(0);
   const [isInfiniteMode, setIsInfiniteMode] = useState(false);
+  const [neuralNetworkVisualization, setNeuralNetworkVisualization] = useState<{ input: number[], output: number[] } | null>(null);
 
   const initializePlayers = useCallback(() => {
     const newPlayers = Array.from({ length: 10 }, (_, i) => ({
@@ -30,14 +31,14 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
 
   const makePrediction = (inputData: number[]): number[] => {
     if (!trainedModel) return [];
-    // Ensure the input shape is correct (add concursoNumber to make it 17 elements)
-    const input = [...inputData, concursoNumber];
+    const input = [...inputData, concursoNumber / 3184]; // Normalize concursoNumber
     const inputTensor = tf.tensor2d([input]);
     const predictions = trainedModel.predict(inputTensor) as tf.Tensor;
     const result = Array.from(predictions.dataSync());
     inputTensor.dispose();
     predictions.dispose();
-    return result.map(num => Math.round(num * 24) + 1);
+    setNeuralNetworkVisualization({ input, output: result });
+    return result.map(num => Math.round(num * 24) + 1); // Denormalize output
   };
 
   const gameLoop = useCallback(() => {
@@ -72,7 +73,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
 
   const evolveGeneration = useCallback(() => {
     setGeneration(prev => prev + 1);
-    // Implement your evolution logic here if needed
+    // Implement evolution logic here if needed
   }, []);
 
   const calculateDynamicReward = (matches: number): number => {
@@ -89,6 +90,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setIsInfiniteMode,
     initializePlayers,
     gameLoop,
-    evolveGeneration
+    evolveGeneration,
+    neuralNetworkVisualization
   };
 };
