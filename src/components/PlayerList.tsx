@@ -1,4 +1,5 @@
 import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Player {
   id: number;
@@ -16,12 +17,16 @@ const PlayerList: React.FC<PlayerListProps> = ({ players }) => {
       {players.map(player => {
         const lastScore = player.predictions.length > 0 ? player.predictions.filter(num => player.predictions.includes(num)).length : 0;
         return (
-          <div key={player.id} className="bg-gray-100 p-4 rounded-lg shadow">
-            <h4 className="font-semibold text-lg mb-2">Jogador {player.id}</h4>
-            <p className="mb-1">Pontuação Total: {player.score.toFixed(2)}</p>
-            <p className="mb-1">Última Pontuação: {lastScore}</p>
-            <p className="mb-1">Previsões: {player.predictions.join(', ') || 'Nenhuma previsão ainda'}</p>
-          </div>
+          <Card key={player.id} className="bg-white dark:bg-gray-800">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold">Jogador {player.id}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xl font-semibold mb-2">Pontuação Total: {player.score.toFixed(2)}</p>
+              <p className="mb-1">Última Pontuação: {lastScore}</p>
+              <p className="mb-1 text-sm">Previsões: {player.predictions.join(', ') || 'Nenhuma previsão ainda'}</p>
+            </CardContent>
+          </Card>
         );
       })}
     </div>
