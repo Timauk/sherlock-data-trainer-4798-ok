@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTheme } from 'next-themes';
-import * as tf from '@tensorflow/tfjs';
 import DataUploader from '@/components/DataUploader';
 import GameControls from '@/components/GameControls';
 import GameBoard from '@/components/GameBoard';
@@ -10,14 +9,14 @@ import { Progress } from "@/components/ui/progress";
 import { useGameLogic } from '@/hooks/useGameLogic';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { toast } from "@/components/ui/use-toast";
+import { showToast, loadCSV, loadModel } from '@/utils/gameUtils';
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [csvData, setCsvData] = useState<number[][]>([]);
   const [csvDates, setCsvDates] = useState<Date[]>([]);
-  const [trainedModel, setTrainedModel] = useState<tf.LayersModel | null>(null);
+  const [trainedModel, setTrainedModel] = useState<any>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const { theme, setTheme } = useTheme();
 
@@ -39,81 +38,29 @@ const PlayPage: React.FC = () => {
     setLogs(prevLogs => [...prevLogs, message]);
   }, []);
 
-  const loadCSV = useCallback(async (file: File) => {
-    try {
-      const text = await file.text();
-      const lines = text.trim().split('\n').slice(1); // Ignorar o cabeçalho
-      const data = lines.map(line => {
-        const values = line.split(',');
-        return {
-          concurso: parseInt(values[0], 10),
-          data: new Date(values[1].split('/').reverse().join('-')),
-          bolas: values.slice(2).map(Number)
-        };
-      });
-      setCsvData(data.map(d => d.bolas));
-      setCsvDates(data.map(d => d.data));
-      addLog("CSV carregado e processado com sucesso!");
-      addLog(`Número de registros carregados: ${data.length}`);
-      toast({
-        title: "CSV Carregado",
-        description: `${data.length} registros processados com sucesso.`,
-      });
-    } catch (error) {
-      addLog(`Erro ao carregar CSV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-      toast({
-        title: "Erro ao carregar CSV",
-        description: "Ocorreu um erro ao processar o arquivo.",
-        variant: "destructive",
-      });
-    }
+  const handleLoadCSV = useCallback((file: File) => {
+    loadCSV(file, setCsvData, setCsvDates, addLog);
   }, [addLog]);
 
-  const loadModel = useCallback(async (jsonFile: File, weightsFile: File) => {
-    try {
-      const model = await tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]));
-      setTrainedModel(model);
-      addLog("Modelo carregado com sucesso!");
-      toast({
-        title: "Modelo Carregado",
-        description: "O modelo de IA foi carregado com sucesso.",
-      });
-    } catch (error) {
-      addLog(`Erro ao carregar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-      console.error("Detalhes do erro:", error);
-      toast({
-        title: "Erro ao carregar o modelo",
-        description: "Ocorreu um erro ao carregar o modelo de IA.",
-        variant: "destructive",
-      });
-    }
+  const handleLoadModel = useCallback((jsonFile: File, weightsFile: File) => {
+    loadModel(jsonFile, weightsFile, setTrainedModel, addLog);
   }, [addLog]);
 
   const playGame = useCallback(() => {
     if (!trainedModel || csvData.length === 0) {
       addLog("Não é possível iniciar o jogo. Verifique se o modelo e os dados CSV foram carregados.");
-      toast({
-        title: "Não é possível iniciar",
-        description: "Verifique se o modelo e os dados CSV foram carregados.",
-        variant: "destructive",
-      });
+      showToast("Não é possível iniciar", "Verifique se o modelo e os dados CSV foram carregados.", "destructive");
       return;
     }
     setIsPlaying(true);
     addLog("Jogo iniciado.");
-    toast({
-      title: "Jogo Iniciado",
-      description: "O jogo foi iniciado com sucesso.",
-    });
+    showToast("Jogo Iniciado", "O jogo foi iniciado com sucesso.");
   }, [trainedModel, csvData, addLog]);
 
   const pauseGame = useCallback(() => {
     setIsPlaying(false);
     addLog("Jogo pausado.");
-    toast({
-      title: "Jogo Pausado",
-      description: "O jogo foi pausado.",
-    });
+    showToast("Jogo Pausado", "O jogo foi pausado.");
   }, [addLog]);
 
   const resetGame = useCallback(() => {
@@ -122,19 +69,13 @@ const PlayPage: React.FC = () => {
     initializePlayers();
     setLogs([]);
     addLog("Jogo reiniciado.");
-    toast({
-      title: "Jogo Reiniciado",
-      description: "O jogo foi reiniciado com sucesso.",
-    });
+    showToast("Jogo Reiniciado", "O jogo foi reiniciado com sucesso.");
   }, [initializePlayers, addLog]);
 
   const toggleInfiniteMode = useCallback(() => {
     setIsInfiniteMode(prev => !prev);
     addLog(`Modo infinito ${isInfiniteMode ? 'desativado' : 'ativado'}.`);
-    toast({
-      title: `Modo Infinito ${isInfiniteMode ? 'Desativado' : 'Ativado'}`,
-      description: `O modo infinito foi ${isInfiniteMode ? 'desativado' : 'ativado'}.`,
-    });
+    showToast(`Modo Infinito ${isInfiniteMode ? 'Desativado' : 'Ativado'}`, `O modo infinito foi ${isInfiniteMode ? 'desativado' : 'ativado'}.`);
   }, [isInfiniteMode, setIsInfiniteMode, addLog]);
 
   useEffect(() => {
@@ -160,7 +101,7 @@ const PlayPage: React.FC = () => {
       
       <div className="flex flex-wrap gap-4">
         <div className="flex-1">
-          <DataUploader onCsvUpload={loadCSV} onModelUpload={loadModel} />
+          <DataUploader onCsvUpload={handleLoadCSV} onModelUpload={handleLoadModel} />
 
           <GameControls
             isPlaying={isPlaying}
