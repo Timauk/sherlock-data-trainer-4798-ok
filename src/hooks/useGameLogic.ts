@@ -42,7 +42,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     
     // Reshape the input tensor to match the expected 3D shape [batch, timesteps, features]
     // We're using a sequence length of 1 since we're predicting based on a single input
-    const inputTensor = tf.tensor3d([weightedInput], [1, 1, 17]);
+    const inputTensor = tf.tensor3d([[weightedInput]]); // Corrected shape to [1, 1, 17]
     
     const predictions = trainedModel.predict(inputTensor) as tf.Tensor;
     const result = Array.from(predictions.dataSync());
