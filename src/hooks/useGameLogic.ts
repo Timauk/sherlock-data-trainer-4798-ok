@@ -39,7 +39,9 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     const input = [...inputData, normalizedConcursoNumber, normalizedDataSorteio];
     
     const weightedInput = input.map((value, index) => value * (playerWeights[index] / 1000));
-    const inputTensor = tf.tensor2d([weightedInput], [1, 17]);
+    
+    // Reshape the input tensor to match the expected 3D shape [batch, timesteps, features]
+    const inputTensor = tf.tensor3d([weightedInput], [1, 1, 17]);
     
     const predictions = trainedModel.predict(inputTensor) as tf.Tensor;
     const result = Array.from(predictions.dataSync());
@@ -47,7 +49,11 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     inputTensor.dispose();
     predictions.dispose();
     
-    setNeuralNetworkVisualization({ input: weightedInput, output: result, weights: trainedModel.getWeights().map(w => Array.from(w.dataSync())) });
+    setNeuralNetworkVisualization({ 
+      input: weightedInput, 
+      output: result, 
+      weights: trainedModel.getWeights().map(w => Array.from(w.dataSync())) 
+    });
     
     return result.map(num => Math.round(num * 24) + 1);
   };
