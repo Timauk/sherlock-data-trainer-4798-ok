@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import * as tf from '@tensorflow/tfjs';
 
 interface Player {
@@ -17,8 +17,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [isInfiniteMode, setIsInfiniteMode] = useState(false);
   const [neuralNetworkVisualization, setNeuralNetworkVisualization] = useState<{ input: number[], output: number[], weights: number[][] } | null>(null);
 
-  const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
-
   const initializePlayers = useCallback(() => {
     const newPlayers = Array.from({ length: 10 }, (_, i) => ({
       id: i + 1,
@@ -33,7 +31,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     initializePlayers();
   }, [initializePlayers]);
 
-  const makePrediction = useCallback((inputData: number[], playerWeights: number[]): number[] => {
+  const makePrediction = (inputData: number[], playerWeights: number[]): number[] => {
     if (!trainedModel) return [];
     
     const normalizedConcursoNumber = concursoNumber / 3184;
@@ -67,7 +65,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     }
     
     return Array.from(uniqueNumbers);
-  }, [trainedModel, concursoNumber]);
+  };
 
   const gameLoop = useCallback(() => {
     if (csvData.length === 0 || !trainedModel) return;
@@ -98,7 +96,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     ]);
 
     setConcursoNumber(prev => prev + 1);
-  }, [players, csvData, concursoNumber, generation, trainedModel, makePrediction]);
+  }, [players, csvData, concursoNumber, generation, trainedModel]);
 
   const evolveGeneration = useCallback(() => {
     setGeneration(prev => prev + 1);
@@ -113,22 +111,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     }
     return 0; // No reward or punishment for exactly 12 matches
   };
-
-  useEffect(() => {
-    if (isInfiniteMode) {
-      gameLoopRef.current = setInterval(gameLoop, 1000);
-    } else {
-      if (gameLoopRef.current) {
-        clearInterval(gameLoopRef.current);
-      }
-    }
-
-    return () => {
-      if (gameLoopRef.current) {
-        clearInterval(gameLoopRef.current);
-      }
-    };
-  }, [isInfiniteMode, gameLoop]);
 
   return {
     players,
