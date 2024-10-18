@@ -31,14 +31,24 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
 
   const makePrediction = (inputData: number[]): number[] => {
     if (!trainedModel) return [];
-    const input = [...inputData, concursoNumber / 3184]; // Normalize concursoNumber
-    const inputTensor = tf.tensor2d([input]);
+    
+    // Ensure the input shape is correct (16 numbers + normalized concursoNumber)
+    const normalizedConcursoNumber = concursoNumber / 3184; // Assuming 3184 is the max concurso number
+    const input = [...inputData, normalizedConcursoNumber];
+    
+    // Reshape the input to match the expected shape [1, 17]
+    const inputTensor = tf.tensor2d([input], [1, 17]);
+    
     const predictions = trainedModel.predict(inputTensor) as tf.Tensor;
     const result = Array.from(predictions.dataSync());
+    
     inputTensor.dispose();
     predictions.dispose();
+    
     setNeuralNetworkVisualization({ input, output: result });
-    return result.map(num => Math.round(num * 24) + 1); // Denormalize output
+    
+    // Denormalize the output (assuming the output should be between 1 and 25)
+    return result.map(num => Math.round(num * 24) + 1);
   };
 
   const gameLoop = useCallback(() => {
