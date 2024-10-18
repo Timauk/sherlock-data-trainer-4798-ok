@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import * as tf from '@tensorflow/tfjs';
 import DataUploader from '@/components/DataUploader';
@@ -38,7 +38,7 @@ const PlayPage: React.FC = () => {
     setLogs(prevLogs => [...prevLogs, message]);
   }, []);
 
-  const loadCSV = async (file: File) => {
+  const loadCSV = useCallback(async (file: File) => {
     try {
       const text = await file.text();
       const lines = text.trim().split('\n').slice(1); // Ignorar o cabeçalho
@@ -57,9 +57,9 @@ const PlayPage: React.FC = () => {
     } catch (error) {
       addLog(`Erro ao carregar CSV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
-  };
+  }, [addLog]);
 
-  const loadModel = async (jsonFile: File, weightsFile: File) => {
+  const loadModel = useCallback(async (jsonFile: File, weightsFile: File) => {
     try {
       const model = await tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]));
       setTrainedModel(model);
@@ -68,7 +68,7 @@ const PlayPage: React.FC = () => {
       addLog(`Erro ao carregar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
       console.error("Detalhes do erro:", error);
     }
-  };
+  }, [addLog]);
 
   const playGame = useCallback(() => {
     if (!trainedModel || csvData.length === 0) {
@@ -80,28 +80,27 @@ const PlayPage: React.FC = () => {
     gameLoop();
   }, [trainedModel, csvData, gameLoop, addLog]);
 
-  const pauseGame = () => {
+  const pauseGame = useCallback(() => {
     setIsPlaying(false);
     addLog("Jogo pausado.");
-  };
+  }, [addLog]);
 
-  const resetGame = () => {
+  const resetGame = useCallback(() => {
     setIsPlaying(false);
     setProgress(0);
     initializePlayers();
     setLogs([]);
     addLog("Jogo reiniciado.");
-  };
+  }, [initializePlayers, addLog]);
 
-  const toggleInfiniteMode = () => {
-    setIsInfiniteMode(!isInfiniteMode);
-    addLog(`Modo infinito ${!isInfiniteMode ? 'ativado' : 'desativado'}.`);
-  };
+  const toggleInfiniteMode = useCallback(() => {
+    setIsInfiniteMode(prev => !prev);
+    addLog(`Modo infinito ${isInfiniteMode ? 'desativado' : 'ativado'}.`);
+  }, [isInfiniteMode, setIsInfiniteMode, addLog]);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
     if (isPlaying) {
-      intervalId = setInterval(() => {
+      const intervalId = setInterval(() => {
         gameLoop();
         setProgress((prevProgress) => {
           const newProgress = prevProgress + (100 / csvData.length);
@@ -112,8 +111,8 @@ const PlayPage: React.FC = () => {
           return newProgress;
         });
       }, 1000);
+      return () => clearInterval(intervalId);
     }
-    return () => clearInterval(intervalId);
   }, [isPlaying, csvData, gameLoop, evolveGeneration, isInfiniteMode]);
 
   return (
