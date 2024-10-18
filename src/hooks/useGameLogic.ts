@@ -32,9 +32,10 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const makePrediction = (inputData: number[]): number[] => {
     if (!trainedModel) return [];
     
-    // Ensure the input shape is correct (16 numbers + normalized concursoNumber)
+    // Ensure the input shape is correct (15 numbers + normalized concursoNumber + normalized dataSorteio)
     const normalizedConcursoNumber = concursoNumber / 3184; // Assuming 3184 is the max concurso number
-    const input = [...inputData, normalizedConcursoNumber];
+    const normalizedDataSorteio = Date.now() / (1000 * 60 * 60 * 24 * 365); // Normalize to years since 1970
+    const input = [...inputData, normalizedConcursoNumber, normalizedDataSorteio];
     
     // Reshape the input to match the expected shape [1, 17]
     const inputTensor = tf.tensor2d([input], [1, 17]);
