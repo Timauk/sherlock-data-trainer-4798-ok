@@ -3,7 +3,7 @@ import React from 'react';
 interface NeuralNetworkVisualizationProps {
   input: number[];
   output: number[];
-  weights: number[][];
+  weights?: number[][];
 }
 
 const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({ input, output, weights }) => {
@@ -19,18 +19,20 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
             </div>
           ))}
         </div>
-        <div className="hidden-layers">
-          <h4>Camadas Ocultas</h4>
-          {weights.map((layer, layerIndex) => (
-            <div key={layerIndex} className="layer">
-              {layer.map((weight, neuronIndex) => (
-                <div key={neuronIndex} className="neuron" style={{opacity: Math.abs(weight)}}>
-                  {weight.toFixed(2)}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+        {weights && (
+          <div className="hidden-layers">
+            <h4>Camadas Ocultas</h4>
+            {weights.map((layer, layerIndex) => (
+              <div key={layerIndex} className="layer">
+                {layer.map((weight, neuronIndex) => (
+                  <div key={neuronIndex} className="neuron" style={{opacity: Math.abs(weight)}}>
+                    {weight.toFixed(2)}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
         <div className="output-layer">
           <h4>Camada de Saída</h4>
           {output.map((value, index) => (
