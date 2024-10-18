@@ -40,10 +40,8 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     
     const weightedInput = input.map((value, index) => value * (playerWeights[index] / 1000));
     
-    // Reshape the input tensor to match the expected 3D shape [batch, timesteps, features]
-    // We're using a sequence length of 10 to match the expected input shape
     const paddedInput = Array(10).fill(weightedInput);
-    const inputTensor = tf.tensor3d([paddedInput]); // Shape: [1, 10, 17]
+    const inputTensor = tf.tensor3d([paddedInput]);
     
     const predictions = trainedModel.predict(inputTensor) as tf.Tensor;
     const result = Array.from(predictions.dataSync());
@@ -57,7 +55,16 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       weights: trainedModel.getWeights().map(w => Array.from(w.dataSync())) 
     });
     
-    return result.map(num => Math.round(num * 24) + 1);
+    // Ensure no duplicate numbers
+    const uniqueNumbers = new Set<number>();
+    while (uniqueNumbers.size < 15) {
+      const num = Math.round(result[uniqueNumbers.size] * 24) + 1;
+      if (!uniqueNumbers.has(num)) {
+        uniqueNumbers.add(num);
+      }
+    }
+    
+    return Array.from(uniqueNumbers);
   };
 
   const gameLoop = useCallback(() => {
@@ -70,9 +77,10 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       const playerPredictions = makePrediction(currentBoardNumbers, player.weights);
       const matches = playerPredictions.filter(num => currentBoardNumbers.includes(num)).length;
       const reward = calculateDynamicReward(matches);
+      const extraPoint = matches > 0 ? 1 : 0; // Extra point for any correct guess
       return {
         ...player,
-        score: player.score + reward,
+        score: player.score + reward + extraPoint,
         predictions: playerPredictions
       };
     });
@@ -96,7 +104,12 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   }, []);
 
   const calculateDynamicReward = (matches: number): number => {
-    return matches > 12 ? Math.pow(2, matches - 12) : -Math.pow(2, 12 - matches);
+    if (matches > 12) {
+      return Math.pow(2, matches - 12);
+    } else if (matches < 12) {
+      return -Math.pow(2, 12 - matches);
+    }
+    return 0; // No reward or punishment for exactly 12 matches
   };
 
   return {
