@@ -166,7 +166,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
         
         setPlayers(prevPlayers => prevPlayers.map(player => ({
           ...player,
-          model: tf.models.modelFromJSON(loadedModel.toJSON())
+          model: loadedModel.clone()
         })));
       } catch (error) {
         console.error("Error loading model:", error);
