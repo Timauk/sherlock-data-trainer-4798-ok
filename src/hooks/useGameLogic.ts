@@ -33,7 +33,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
       id: i + 1,
       score: 0,
       predictions: [],
-      model: initialModel ? initialModel.clone() : createModel()
+      model: initialModel ? tf.models.modelFromJSON(initialModel.toJSON()) : createModel()
     }));
     setPlayers(newPlayers);
   }, [initialModel]);
@@ -63,7 +63,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
     setNeuralNetworkVisualization({ 
       input, 
       output: Array.from(uniqueNumbers), 
-      weights: playerModel.getWeights().map(w => Array.from(w.data())) 
+      weights: playerModel.getWeights().map(w => Array.from(w.dataSync())) 
     });
     
     return Array.from(uniqueNumbers);
@@ -127,7 +127,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
       const clonedPlayers = Array(10).fill(null).map((_, index) => ({
         ...bestPlayer,
         id: index + 1,
-        model: bestPlayer.model.clone()
+        model: tf.models.modelFromJSON(bestPlayer.model.toJSON())
       }));
       setPlayers(clonedPlayers);
     }
@@ -145,8 +145,11 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
     const reader = new FileReader();
     reader.onload = async (e) => {
       const modelJSON = JSON.parse(e.target?.result as string);
-      const loadedModel = await tf.models.modelFromJSON(modelJSON);
-      initializePlayers();
+      const loadedModel = await tf.loadLayersModel(tf.io.fromMemory(modelJSON));
+      setPlayers(prevPlayers => prevPlayers.map(player => ({
+        ...player,
+        model: tf.models.modelFromJSON(loadedModel.toJSON())
+      })));
     };
     reader.readAsText(file);
   };
