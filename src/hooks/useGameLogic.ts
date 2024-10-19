@@ -21,11 +21,12 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
 
   const createModel = (): tf.LayersModel => {
     const model = tf.sequential();
-    model.add(tf.layers.dense({ units: 128, activation: 'relu', inputShape: [17] }));
-    model.add(tf.layers.batchNormalization());
-    model.add(tf.layers.dense({ units: 128, activation: 'relu' }));
+    model.add(tf.layers.lstm({ units: 64, inputShape: [5, 17], returnSequences: true }));
+    model.add(tf.layers.lstm({ units: 32 }));
+    model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
+    model.add(tf.layers.dropout({ rate: 0.2 }));
     model.add(tf.layers.dense({ units: 15, activation: 'sigmoid' }));
-    model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
+    model.compile({ optimizer: 'adam', loss: 'binaryCrossentropy' });
     return model;
   };
 
@@ -44,15 +45,11 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
   }, [initializePlayers]);
 
   const makePrediction = (inputData: number[], playerModel: tf.LayersModel): number[] => {
-    const normalizedConcursoNumber = concursoNumber / 3184;
-    const normalizedDataSorteio = Date.now() / (1000 * 60 * 60 * 24 * 365);
-    const input = [...inputData, normalizedConcursoNumber, normalizedDataSorteio];
-    
-    const inputTensor = tf.tensor2d([input]);
-    const predictions = playerModel.predict(inputTensor) as tf.Tensor;
+    const recentDraws = csvData.slice(-5).map(draw => [...draw, concursoNumber / 3184, Date.now() / (1000 * 60 * 60 * 24 * 365)]);
+    const input = tf.tensor3d([recentDraws]);
+    const predictions = playerModel.predict(input) as tf.Tensor;
     const result = Array.from(predictions.dataSync());
-    
-    inputTensor.dispose();
+    input.dispose();
     predictions.dispose();
     
     const uniqueNumbers = new Set<number>();
@@ -62,9 +59,9 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
     }
     
     setNeuralNetworkVisualization({ 
-      input, 
-      output: Array.from(uniqueNumbers), 
-      weights: playerModel.getWeights().map(w => Array.from(w.dataSync())) 
+      input: recentDraws.flat(),
+      output: Array.from(uniqueNumbers),
+      weights: playerModel.getWeights().map(w => Array.from(w.dataSync()))
     });
     
     return Array.from(uniqueNumbers);
@@ -137,7 +134,15 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
   const saveModel = async () => {
     if (bestPlayer) {
       const modelJSON = await bestPlayer.model.toJSON();
-      const blob = new Blob([JSON.stringify(modelJSON)], { type: 'application/json' });
+      const modelWeights = await bestPlayer.model.getWeights();
+      const weightsData = await Promise.all(modelWeights.map(w => w.data()));
+      
+      const saveData = {
+        modelJSON,
+        weightsData
+      };
+      
+      const blob = new Blob([JSON.stringify(saveData)], { type: 'application/json' });
       saveAs(blob, 'sherlok_model.json');
     }
   };
@@ -145,8 +150,14 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
   const loadModel = async (file: File) => {
     const reader = new FileReader();
     reader.onload = async (e) => {
-      const modelJSON = JSON.parse(e.target?.result as string);
-      const loadedModel = await tf.loadLayersModel(tf.io.fromMemory(modelJSON));
+      const saveData = JSON.parse(e.target?.result as string);
+      const loadedModel = await tf.loadLayersModel(tf.io.fromMemory(saveData.modelJSON));
+      
+      const weightsTensors = saveData.weightsData.map((weightData: number[], i: number) => 
+        tf.tensor(weightData, loadedModel.getWeights()[i].shape)
+      );
+      loadedModel.setWeights(weightsTensors);
+      
       setPlayers(prevPlayers => prevPlayers.map(player => ({
         ...player,
         model: tf.models.modelFromJSON(loadedModel.toJSON())

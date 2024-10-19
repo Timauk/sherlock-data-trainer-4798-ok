@@ -25,11 +25,28 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
       const maxNodesInLayer = Math.max(input.length, ...weights.map(w => w.length), output.length);
       const layerHeight = canvas.height / (maxNodesInLayer + 1);
 
+      const drawNode = (x: number, y: number, value: number) => {
+        ctx.beginPath();
+        ctx.arc(x, y, nodeRadius, 0, 2 * Math.PI);
+        ctx.fillStyle = `rgba(0, 123, 255, ${Math.abs(value)})`;
+        ctx.fill();
+        ctx.stroke();
+      };
+
+      const drawConnection = (startX: number, startY: number, endX: number, endY: number, weight: number) => {
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.strokeStyle = `rgba(0, 0, 0, ${Math.abs(weight)})`;
+        ctx.lineWidth = Math.abs(weight) * 3;
+        ctx.stroke();
+      };
+
       // Draw input layer
       input.forEach((value, i) => {
         const x = layerWidth;
         const y = (i + 1) * layerHeight;
-        drawNode(ctx, x, y, nodeRadius, value);
+        drawNode(x, y, value);
       });
 
       // Draw hidden layers
@@ -37,7 +54,7 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
         layer.forEach((node, nodeIndex) => {
           const x = (layerIndex + 2) * layerWidth;
           const y = (nodeIndex + 1) * layerHeight;
-          drawNode(ctx, x, y, nodeRadius, node);
+          drawNode(x, y, node);
         });
       });
 
@@ -45,7 +62,7 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
       output.forEach((value, i) => {
         const x = (layerCount) * layerWidth;
         const y = (i + 1) * layerHeight;
-        drawNode(ctx, x, y, nodeRadius, value);
+        drawNode(x, y, value);
       });
 
       // Draw connections
@@ -59,7 +76,8 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
           const startY = (startIndex + 1) * layerHeight;
           endNodes.forEach((_, endIndex) => {
             const endY = (endIndex + 1) * layerHeight;
-            drawConnection(ctx, startX, startY, endX, endY);
+            const weight = weights[i][endIndex] || 0.5;
+            drawConnection(startX, startY, endX, endY, weight);
           });
         });
       }
@@ -67,22 +85,6 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
 
     drawNetwork();
   }, [input, output, weights]);
-
-  const drawNode = (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, value: number) => {
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, 2 * Math.PI);
-    ctx.fillStyle = `rgba(0, 123, 255, ${Math.abs(value)})`;
-    ctx.fill();
-    ctx.stroke();
-  };
-
-  const drawConnection = (ctx: CanvasRenderingContext2D, startX: number, startY: number, endX: number, endY: number) => {
-    ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    ctx.lineTo(endX, endY);
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-    ctx.stroke();
-  };
 
   return <canvas ref={canvasRef} width={600} height={400} />;
 };

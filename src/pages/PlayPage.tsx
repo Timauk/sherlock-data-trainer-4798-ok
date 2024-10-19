@@ -152,7 +152,7 @@ const PlayPage: React.FC = () => {
             type="file"
             accept=".json"
             style={{ display: 'none' }}
-            onChange={(e) => e.target.files && loadModelFile(e.target.files[0])}
+            onChange={(e) => e.target.files && loadModel(e.target.files[0])}
           />
 
           <div className="mb-4">
