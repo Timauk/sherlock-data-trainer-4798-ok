@@ -22,7 +22,8 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
   const createModel = (): tf.LayersModel => {
     const model = tf.sequential();
     model.add(tf.layers.dense({ units: 128, activation: 'relu', inputShape: [17] }));
-    model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
+    model.add(tf.layers.batchNormalization());
+    model.add(tf.layers.dense({ units: 128, activation: 'relu' }));
     model.add(tf.layers.dense({ units: 15, activation: 'sigmoid' }));
     model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
     return model;
