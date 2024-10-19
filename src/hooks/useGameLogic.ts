@@ -29,7 +29,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
   };
 
   const initializePlayers = useCallback(() => {
-    const newPlayers = Array.from({ length: 10 }, (_, i) => ({
+    const newPlayers: Player[] = Array.from({ length: 10 }, (_, i) => ({
       id: i + 1,
       score: 0,
       predictions: [],
@@ -42,7 +42,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
     initializePlayers();
   }, [initializePlayers]);
 
-  const makePrediction = async (inputData: number[], playerModel: tf.LayersModel): Promise<number[]> => {
+  const makePrediction = (inputData: number[], playerModel: tf.LayersModel): number[] => {
     const normalizedConcursoNumber = concursoNumber / 3184;
     const normalizedDataSorteio = Date.now() / (1000 * 60 * 60 * 24 * 365);
     const input = [...inputData, normalizedConcursoNumber, normalizedDataSorteio];
@@ -75,15 +75,15 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
     const currentBoardNumbers = csvData[concursoNumber % csvData.length];
     setBoardNumbers(currentBoardNumbers);
 
-    const updatedPlayers = await Promise.all(players.map(async player => {
-      const playerPredictions = await makePrediction(currentBoardNumbers, player.model);
+    const updatedPlayers = players.map(player => {
+      const playerPredictions = makePrediction(currentBoardNumbers, player.model);
       const matches = playerPredictions.filter(num => currentBoardNumbers.includes(num)).length;
       const reward = calculateDynamicReward(matches);
       
       // Train the model with the current data
       const inputTensor = tf.tensor2d([currentBoardNumbers]);
       const outputTensor = tf.tensor2d([playerPredictions]);
-      await player.model.fit(inputTensor, outputTensor, { epochs: 1 });
+      player.model.fit(inputTensor, outputTensor, { epochs: 1 });
       
       inputTensor.dispose();
       outputTensor.dispose();
@@ -93,7 +93,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
         score: player.score + reward,
         predictions: playerPredictions
       };
-    }));
+    });
 
     setPlayers(updatedPlayers);
     setEvolutionData(prev => [
@@ -124,7 +124,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
 
   const cloneBestPlayer = () => {
     if (bestPlayer) {
-      const clonedPlayers = Array(10).fill(null).map((_, index) => ({
+      const clonedPlayers: Player[] = Array(10).fill(null).map((_, index) => ({
         ...bestPlayer,
         id: index + 1,
         model: tf.models.modelFromJSON(bestPlayer.model.toJSON())
