@@ -35,7 +35,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
       id: i + 1,
       score: 0,
       predictions: [],
-      model: initialModel ? tf.models.modelFromJSON(initialModel.toJSON()) : createModel()
+      model: initialModel ? initialModel.clone() : createModel()
     }));
     setPlayers(newPlayers);
   }, [initialModel]);
@@ -160,7 +160,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
       
       setPlayers(prevPlayers => prevPlayers.map(player => ({
         ...player,
-        model: tf.models.modelFromJSON(loadedModel.toJSON())
+        model: loadedModel.clone()
       })));
     };
     reader.readAsText(file);
