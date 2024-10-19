@@ -150,18 +150,28 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
   const loadModel = async (file: File) => {
     const reader = new FileReader();
     reader.onload = async (e) => {
-      const saveData = JSON.parse(e.target?.result as string);
-      const loadedModel = await tf.loadLayersModel(tf.io.fromMemory(saveData.modelJSON));
-      
-      const weightsTensors = saveData.weightsData.map((weightData: number[], i: number) => 
-        tf.tensor(weightData, loadedModel.getWeights()[i].shape)
-      );
-      loadedModel.setWeights(weightsTensors);
-      
-      setPlayers(prevPlayers => prevPlayers.map(player => ({
-        ...player,
-        model: tf.models.modelFromJSON(loadedModel.toJSON())
-      })));
+      try {
+        const saveData = JSON.parse(e.target?.result as string);
+        if (!saveData || !saveData.modelJSON) {
+          throw new Error("Invalid model data");
+        }
+        const loadedModel = await tf.loadLayersModel(tf.io.fromMemory(saveData.modelJSON));
+        
+        if (saveData.weightsData) {
+          const weightsTensors = saveData.weightsData.map((weightData: number[], i: number) => 
+            tf.tensor(weightData, loadedModel.getWeights()[i].shape)
+          );
+          loadedModel.setWeights(weightsTensors);
+        }
+        
+        setPlayers(prevPlayers => prevPlayers.map(player => ({
+          ...player,
+          model: tf.models.modelFromJSON(loadedModel.toJSON())
+        })));
+      } catch (error) {
+        console.error("Error loading model:", error);
+        // You might want to show an error message to the user here
+      }
     };
     reader.readAsText(file);
   };
