@@ -31,7 +31,9 @@ const PlayPage: React.FC = () => {
     initializePlayers,
     gameLoop,
     evolveGeneration,
-    neuralNetworkVisualization
+    neuralNetworkVisualization,
+    bestPlayer,
+    cloneBestPlayer
   } = useGameLogic(csvData, trainedModel);
 
   const addLog = useCallback((message: string) => {
@@ -146,6 +148,8 @@ const PlayPage: React.FC = () => {
             concursoNumber={concursoNumber}
             players={players}
             evolutionData={evolutionData}
+            bestPlayer={bestPlayer}
+            onCloneBestPlayer={cloneBestPlayer}
           />
           
           <LogDisplay logs={logs} />

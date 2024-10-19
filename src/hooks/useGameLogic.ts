@@ -16,6 +16,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [concursoNumber, setConcursoNumber] = useState(0);
   const [isInfiniteMode, setIsInfiniteMode] = useState(false);
   const [neuralNetworkVisualization, setNeuralNetworkVisualization] = useState<{ input: number[], output: number[], weights: number[][] } | null>(null);
+  const [bestPlayer, setBestPlayer] = useState<Player | null>(null);
 
   const initializePlayers = useCallback(() => {
     const newPlayers = Array.from({ length: 10 }, (_, i) => ({
@@ -104,6 +105,11 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       }))
     ]);
 
+    const newBestPlayer = updatedPlayers.reduce((best, current) => 
+      current.score > best.score ? current : best
+    );
+    setBestPlayer(newBestPlayer);
+
     setConcursoNumber(prev => prev + 1);
   }, [players, csvData, concursoNumber, generation, trainedModel]);
 
@@ -112,12 +118,19 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   }, []);
 
   const calculateDynamicReward = (matches: number): number => {
-    if (matches === 11) {
-      return 1000; // Pontuação especial para 11 acertos
-    } else if (matches > 11) {
-      return Math.pow(2, matches - 11) * 1000; // Pontuação exponencial para mais de 11 acertos
-    } else {
-      return matches > 0 ? Math.pow(2, matches) : 0; // Pontuação para menos de 11 acertos
+    if (matches >= 11 && matches <= 15) {
+      return matches - 10; // 1 ponto para 11 acertos, 2 para 12, ..., 5 para 15
+    }
+    return 0; // Nenhum ponto para menos de 11 acertos
+  };
+
+  const cloneBestPlayer = () => {
+    if (bestPlayer) {
+      const clonedPlayers = Array(10).fill(null).map((_, index) => ({
+        ...bestPlayer,
+        id: index + 1
+      }));
+      setPlayers(clonedPlayers);
     }
   };
 
@@ -132,6 +145,8 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     initializePlayers,
     gameLoop,
     evolveGeneration,
-    neuralNetworkVisualization
+    neuralNetworkVisualization,
+    bestPlayer,
+    cloneBestPlayer
   };
 };
