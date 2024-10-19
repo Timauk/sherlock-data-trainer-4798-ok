@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { useGameLogic } from '@/hooks/useGameLogic';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Save, Upload } from 'lucide-react';
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -33,7 +34,9 @@ const PlayPage: React.FC = () => {
     evolveGeneration,
     neuralNetworkVisualization,
     bestPlayer,
-    cloneBestPlayer
+    cloneBestPlayer,
+    saveModel,
+    loadModel
   } = useGameLogic(csvData, trainedModel);
 
   const addLog = useCallback((message: string) => {
@@ -61,11 +64,10 @@ const PlayPage: React.FC = () => {
     }
   };
 
-  const loadModel = async (jsonFile: File, weightsFile: File) => {
+  const loadModelFile = async (file: File) => {
     try {
-      const model = await tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]));
-      setTrainedModel(model);
-      addLog("Modelo carregado com sucesso!");
+      await loadModel(file);
+      addLog("Modelo Sherlok carregado com sucesso!");
     } catch (error) {
       addLog(`Erro ao carregar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
       console.error("Detalhes do erro:", error);
@@ -73,14 +75,14 @@ const PlayPage: React.FC = () => {
   };
 
   const playGame = useCallback(() => {
-    if (!trainedModel || csvData.length === 0) {
-      addLog("Não é possível iniciar o jogo. Verifique se o modelo e os dados CSV foram carregados.");
+    if (csvData.length === 0) {
+      addLog("Não é possível iniciar o jogo. Verifique se os dados CSV foram carregados.");
       return;
     }
     setIsPlaying(true);
     addLog("Jogo iniciado.");
     gameLoop();
-  }, [trainedModel, csvData, gameLoop, addLog]);
+  }, [csvData, gameLoop, addLog]);
 
   const pauseGame = () => {
     setIsPlaying(false);
@@ -124,7 +126,7 @@ const PlayPage: React.FC = () => {
       
       <div className="flex flex-wrap gap-4">
         <div className="flex-1">
-          <DataUploader onCsvUpload={loadCSV} onModelUpload={loadModel} />
+          <DataUploader onCsvUpload={loadCSV} onModelUpload={loadModelFile} />
 
           <GameControls
             isPlaying={isPlaying}
@@ -137,6 +139,21 @@ const PlayPage: React.FC = () => {
           <Button onClick={toggleInfiniteMode} className="mt-2">
             {isInfiniteMode ? 'Desativar' : 'Ativar'} Modo Infinito
           </Button>
+
+          <Button onClick={saveModel} className="mt-2 ml-2 bg-red-500 hover:bg-red-700">
+            <Save className="mr-2 h-4 w-4" /> Salvar Sherlok
+          </Button>
+
+          <Button onClick={() => document.getElementById('loadSherlok')?.click()} className="mt-2 ml-2 bg-red-500 hover:bg-red-700">
+            <Upload className="mr-2 h-4 w-4" /> Carregar Sherlok
+          </Button>
+          <input
+            id="loadSherlok"
+            type="file"
+            accept=".json"
+            style={{ display: 'none' }}
+            onChange={(e) => e.target.files && loadModelFile(e.target.files[0])}
+          />
 
           <div className="mb-4">
             <h3 className="text-lg font-semibold mb-2">Progresso da Geração {generation}</h3>
