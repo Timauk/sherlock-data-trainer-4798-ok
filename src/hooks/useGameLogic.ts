@@ -40,7 +40,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     
     const weightedInput = input.map((value, index) => value * (playerWeights[index] / 1000));
     
-    // Create a 2D tensor instead of 3D
     const inputTensor = tf.tensor2d([weightedInput]);
     
     const predictions = trainedModel.predict(inputTensor) as tf.Tensor;
@@ -49,7 +48,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     inputTensor.dispose();
     predictions.dispose();
     
-    // Modification to guarantee unique numbers
     const uniqueNumbers = new Set<number>();
     let attempts = 0;
     const maxAttempts = 1000; // Prevent infinite loop
@@ -63,7 +61,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       attempts++;
     }
     
-    // If we couldn't generate 15 unique numbers, fill the rest with random numbers
     while (uniqueNumbers.size < 15) {
       const randomNum = Math.floor(Math.random() * 25) + 1;
       if (!uniqueNumbers.has(randomNum)) {
@@ -112,11 +109,16 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
 
   const evolveGeneration = useCallback(() => {
     setGeneration(prev => prev + 1);
-    // Implement evolution logic here if needed
   }, []);
 
   const calculateDynamicReward = (matches: number): number => {
-    return matches > 12 ? Math.pow(2, matches - 12) : -Math.pow(2, 12 - matches);
+    if (matches === 11) {
+      return 1000; // Pontuação especial para 11 acertos
+    } else if (matches > 11) {
+      return Math.pow(2, matches - 11) * 1000; // Pontuação exponencial para mais de 11 acertos
+    } else {
+      return matches > 0 ? Math.pow(2, matches) : 0; // Pontuação para menos de 11 acertos
+    }
   };
 
   return {
