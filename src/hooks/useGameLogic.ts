@@ -48,8 +48,8 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
     const input = [...inputData, normalizedConcursoNumber, normalizedDataSorteio];
     
     const inputTensor = tf.tensor2d([input]);
-    const predictions = await playerModel.predict(inputTensor) as tf.Tensor;
-    const result = Array.from(await predictions.data());
+    const predictions = playerModel.predict(inputTensor) as tf.Tensor;
+    const result = Array.from(predictions.dataSync());
     
     inputTensor.dispose();
     predictions.dispose();

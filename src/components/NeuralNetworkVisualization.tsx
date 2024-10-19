@@ -49,7 +49,20 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
       });
 
       // Draw connections
-      // ... (implement connection drawing logic here)
+      for (let i = 0; i < layerCount - 1; i++) {
+        const startX = (i + 1) * layerWidth;
+        const endX = (i + 2) * layerWidth;
+        const startNodes = i === 0 ? input : weights[i - 1];
+        const endNodes = i === layerCount - 2 ? output : weights[i];
+
+        startNodes.forEach((_, startIndex) => {
+          const startY = (startIndex + 1) * layerHeight;
+          endNodes.forEach((_, endIndex) => {
+            const endY = (endIndex + 1) * layerHeight;
+            drawConnection(ctx, startX, startY, endX, endY);
+          });
+        });
+      }
     };
 
     drawNetwork();
@@ -60,6 +73,14 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
     ctx.arc(x, y, radius, 0, 2 * Math.PI);
     ctx.fillStyle = `rgba(0, 123, 255, ${Math.abs(value)})`;
     ctx.fill();
+    ctx.stroke();
+  };
+
+  const drawConnection = (ctx: CanvasRenderingContext2D, startX: number, startY: number, endX: number, endY: number) => {
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, endY);
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
     ctx.stroke();
   };
 
