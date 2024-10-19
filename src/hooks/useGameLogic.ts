@@ -40,8 +40,8 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     
     const weightedInput = input.map((value, index) => value * (playerWeights[index] / 1000));
     
-    const paddedInput = Array(10).fill(weightedInput);
-    const inputTensor = tf.tensor3d([paddedInput]);
+    // Create a 2D tensor instead of 3D
+    const inputTensor = tf.tensor2d([weightedInput]);
     
     const predictions = trainedModel.predict(inputTensor) as tf.Tensor;
     const result = Array.from(predictions.dataSync());
@@ -49,7 +49,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     inputTensor.dispose();
     predictions.dispose();
     
-    // Modificação para garantir números únicos
+    // Modification to guarantee unique numbers
     const uniqueNumbers = new Set<number>();
     let attempts = 0;
     const maxAttempts = 1000; // Prevent infinite loop
