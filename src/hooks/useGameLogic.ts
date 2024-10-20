@@ -104,7 +104,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
       const clonedPlayers: Player[] = await Promise.all(Array(10).fill(null).map(async (_, index) => ({
         ...bestPlayer,
         id: index + 1,
-        model: await tf.models.modelFromJSON(bestPlayer.model.toJSON()) as tf.LayersModel
+        model: await tf.models.modelFromJSON(bestPlayer.model.toJSON() as unknown as tf.io.ModelJSON)
       })));
       setPlayers(clonedPlayers);
     }
