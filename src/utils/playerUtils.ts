@@ -23,6 +23,6 @@ export const initializePlayers = async (count: number, initialModel: tf.LayersMo
     id: i + 1,
     score: 0,
     predictions: [],
-    model: initialModel ? await tf.models.modelFromJSON(initialModel.toJSON() as tf.io.ModelJSON) : createModel()
+    model: initialModel ? await tf.models.modelFromJSON(initialModel.toJSON() as unknown as tf.io.ModelJSON) : createModel()
   })));
 };

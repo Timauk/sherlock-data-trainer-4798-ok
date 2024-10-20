@@ -7,14 +7,17 @@ export const makePrediction = (
   concursoNumber: number,
   hotNumbers: number[]
 ): number[] => {
-  // Garantir que temos 15 números de entrada
+  // Ensure we have 15 numbers, pad with zeros if necessary
   const paddedInputData = inputData.slice(0, 15).concat(Array(Math.max(0, 15 - inputData.length)).fill(0));
   
-  // Criar um tensor 3D com a forma correta [1, 10, 17]
-  const recentDraws = Array(10).fill(paddedInputData).map((draw, index) => [
+  // Normalize the input data
+  const normalizedInput = paddedInputData.map(num => num / 25);
+  
+  // Create a tensor 3D with the correct shape [1, 10, 17]
+  const recentDraws = Array(10).fill(normalizedInput).map((draw, index) => [
     ...draw,
-    concursoNumber / 3184, // Normalizar o número do concurso
-    Date.now() / (1000 * 60 * 60 * 24 * 365) // Adicionar timestamp normalizado
+    concursoNumber / 3184, // Normalize the concurso number
+    Date.now() / (1000 * 60 * 60 * 24 * 365) // Add normalized timestamp
   ]);
   
   const input = tf.tensor3d([recentDraws]);
