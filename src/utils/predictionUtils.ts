@@ -7,7 +7,7 @@ export const makePrediction = (
   concursoNumber: number,
   hotNumbers: number[]
 ): number[] => {
-  const recentDraws = inputData.slice(-10).map(draw => [...draw, concursoNumber / 3184, Date.now() / (1000 * 60 * 60 * 24 * 365)]);
+  const recentDraws = inputData.slice(-10).map(draw => [...Array.from(draw), concursoNumber / 3184, Date.now() / (1000 * 60 * 60 * 24 * 365)]);
   const input = tf.tensor3d([recentDraws]);
   const predictions = playerModel.predict(input) as tf.Tensor;
   const result = Array.from(predictions.dataSync());

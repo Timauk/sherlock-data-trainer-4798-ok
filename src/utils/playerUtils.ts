@@ -23,6 +23,6 @@ export const initializePlayers = (count: number, initialModel: tf.LayersModel | 
     id: i + 1,
     score: 0,
     predictions: [],
-    model: initialModel ? tf.models.modelFromJSON(initialModel.toJSON()) : createModel()
+    model: initialModel ? tf.models.modelFromJSON(initialModel.toJSON()) as tf.LayersModel : createModel()
   }));
 };
