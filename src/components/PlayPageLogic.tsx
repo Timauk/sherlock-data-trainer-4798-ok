@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTheme } from 'next-themes';
 import * as tf from '@tensorflow/tfjs';
 import DataUploader from '@/components/DataUploader';
 import GameControls from '@/components/GameControls';
@@ -11,6 +12,7 @@ import { useGameLogic } from '@/hooks/useGameLogic';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Save, Upload } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 import { processCSV, extractDateFromCSV } from '@/utils/csvUtils';
 import { addDerivedFeatures, normalizeData } from '@/utils/aiModel';
 
@@ -47,6 +49,7 @@ export const PlayPageLogic: React.FC<PlayPageLogicProps> = ({ toast, theme, setT
 
   const addLog = useCallback((message: string) => {
     setLogs(prevLogs => [...prevLogs, message]);
+    console.log(message); // Adiciona log no console para depuração
   }, []);
 
   const loadCSV = async (file: File) => {
@@ -109,6 +112,24 @@ export const PlayPageLogic: React.FC<PlayPageLogicProps> = ({ toast, theme, setT
     });
   }, [csvData, addLog, toast]);
 
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    if (isPlaying) {
+      intervalId = setInterval(() => {
+        gameLoop();
+        setProgress((prevProgress) => {
+          const newProgress = prevProgress + (100 / csvData.length);
+          if (newProgress >= 100) {
+            evolveGeneration();
+            return isInfiniteMode ? 0 : 100;
+          }
+          return newProgress;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(intervalId);
+  }, [isPlaying, csvData, gameLoop, evolveGeneration, isInfiniteMode]);
+
   const pauseGame = () => {
     setIsPlaying(false);
     addLog("Jogo pausado.");
@@ -138,24 +159,6 @@ export const PlayPageLogic: React.FC<PlayPageLogicProps> = ({ toast, theme, setT
     });
   };
 
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-    if (isPlaying) {
-      intervalId = setInterval(() => {
-        gameLoop();
-        setProgress((prevProgress) => {
-          const newProgress = prevProgress + (100 / csvData.length);
-          if (newProgress >= 100) {
-            evolveGeneration();
-            return isInfiniteMode ? 0 : 100;
-          }
-          return newProgress;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(intervalId);
-  }, [isPlaying, csvData, gameLoop, evolveGeneration, isInfiniteMode]);
-
   return (
     <div className="flex flex-wrap gap-4">
       <div className="flex-1">
@@ -164,11 +167,22 @@ export const PlayPageLogic: React.FC<PlayPageLogicProps> = ({ toast, theme, setT
         <GameControls
           isPlaying={isPlaying}
           onPlay={playGame}
-          onPause={pauseGame}
-          onReset={resetGame}
+          onPause={() => {
+            setIsPlaying(false);
+            addLog("Jogo pausado.");
+          }}
+          onReset={() => {
+            setIsPlaying(false);
+            setProgress(0);
+            setLogs([]);
+            addLog("Jogo reiniciado.");
+          }}
           onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         />
-        <Button onClick={toggleInfiniteMode} className="mt-2">
+        <Button onClick={() => {
+          setIsInfiniteMode(!isInfiniteMode);
+          addLog(`Modo infinito ${!isInfiniteMode ? 'ativado' : 'desativado'}.`);
+        }} className="mt-2">
           {isInfiniteMode ? 'Desativar' : 'Ativar'} Modo Infinito
         </Button>
         <Button onClick={saveModel} className="mt-2 ml-2 bg-red-500 hover:bg-red-700">

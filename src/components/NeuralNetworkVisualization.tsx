@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { ForceGraph2D } from 'react-force-graph';
+import React, { useEffect, useRef } from 'react';
+import * as d3 from 'd3';
 
 interface NeuralNetworkVisualizationProps {
   input: number[];
@@ -8,72 +8,85 @@ interface NeuralNetworkVisualizationProps {
 }
 
 const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({ input, output, weights }) => {
-  const graphData = useMemo(() => {
-    const nodes = [];
-    const links = [];
-    
-    // Input layer
-    input.forEach((value, i) => {
-      nodes.push({ id: `input-${i}`, val: value, layer: 0 });
-    });
+  const svgRef = useRef<SVGSVGElement>(null);
 
-    // Hidden layers
-    weights.forEach((layer, layerIndex) => {
-      layer.forEach((node, nodeIndex) => {
-        nodes.push({ id: `hidden-${layerIndex}-${nodeIndex}`, val: node, layer: layerIndex + 1 });
-        
-        // Connect to previous layer
-        const prevLayer = layerIndex === 0 ? input : weights[layerIndex - 1];
-        prevLayer.forEach((_, prevIndex) => {
-          links.push({
-            source: layerIndex === 0 ? `input-${prevIndex}` : `hidden-${layerIndex-1}-${prevIndex}`,
-            target: `hidden-${layerIndex}-${nodeIndex}`,
-            value: Math.abs(node)
-          });
+  useEffect(() => {
+    if (!svgRef.current) return;
+
+    const svg = d3.select(svgRef.current);
+    svg.selectAll("*").remove();
+
+    const width = 600;
+    const height = 400;
+    const nodeRadius = 20;
+
+    svg.attr("width", width).attr("height", height);
+
+    const layers = [input.length, ...weights.map(w => w.length), output.length];
+    const layerSpacing = width / (layers.length - 1);
+
+    let nodes: { x: number; y: number; value: number }[] = [];
+    let links: { source: number; target: number; value: number }[] = [];
+
+    layers.forEach((layerSize, layerIndex) => {
+      const layerValues = layerIndex === 0 ? input : layerIndex === layers.length - 1 ? output : weights[layerIndex - 1];
+      const yStep = height / (layerSize + 1);
+      
+      layerValues.forEach((value, nodeIndex) => {
+        nodes.push({
+          x: layerIndex * layerSpacing,
+          y: (nodeIndex + 1) * yStep,
+          value: value
         });
+
+        if (layerIndex > 0) {
+          const prevLayerSize = layers[layerIndex - 1];
+          for (let prevNodeIndex = 0; prevNodeIndex < prevLayerSize; prevNodeIndex++) {
+            links.push({
+              source: (layerIndex - 1) * prevLayerSize + prevNodeIndex,
+              target: nodes.length - 1,
+              value: weights[layerIndex - 1][nodeIndex]
+            });
+          }
+        }
       });
     });
 
-    // Output layer
-    output.forEach((value, i) => {
-      nodes.push({ id: `output-${i}`, val: value, layer: weights.length + 1 });
-      weights[weights.length - 1].forEach((_, nodeIndex) => {
-        links.push({
-          source: `hidden-${weights.length-1}-${nodeIndex}`,
-          target: `output-${i}`,
-          value: Math.abs(value)
-        });
-      });
-    });
+    svg.selectAll("line")
+      .data(links)
+      .enter()
+      .append("line")
+      .attr("x1", d => nodes[d.source].x)
+      .attr("y1", d => nodes[d.source].y)
+      .attr("x2", d => nodes[d.target].x)
+      .attr("y2", d => nodes[d.target].y)
+      .attr("stroke", d => d3.interpolateRdYlBu(1 - Math.abs(d.value)))
+      .attr("stroke-width", d => Math.abs(d.value) * 3);
 
-    return { nodes, links };
+    svg.selectAll("circle")
+      .data(nodes)
+      .enter()
+      .append("circle")
+      .attr("cx", d => d.x)
+      .attr("cy", d => d.y)
+      .attr("r", nodeRadius)
+      .attr("fill", d => d3.interpolateRdYlBu(1 - d.value));
+
+    svg.selectAll("text")
+      .data(nodes)
+      .enter()
+      .append("text")
+      .attr("x", d => d.x)
+      .attr("y", d => d.y)
+      .attr("dy", "0.35em")
+      .attr("text-anchor", "middle")
+      .text(d => d.value.toFixed(2))
+      .attr("font-size", "10px")
+      .attr("fill", "black");
+
   }, [input, output, weights]);
 
-  return (
-    <div style={{ width: '100%', height: '400px' }}>
-      <ForceGraph2D
-        graphData={graphData}
-        nodeRelSize={5}
-        nodeVal={node => Math.abs(node.val)}
-        nodeColor={node => {
-          if (node.id.startsWith('input')) return 'rgb(0, 255, 0)';
-          if (node.id.startsWith('output')) return 'rgb(255, 0, 0)';
-          return 'rgb(0, 0, 255)';
-        }}
-        linkWidth={link => Math.sqrt(link.value)}
-        linkColor={() => 'rgba(255, 255, 255, 0.2)'}
-        nodeCanvasObject={(node, ctx, globalScale) => {
-          const label = node.id;
-          const fontSize = 12/globalScale;
-          ctx.font = `${fontSize}px Sans-Serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = 'white';
-          ctx.fillText(label, node.x, node.y);
-        }}
-      />
-    </div>
-  );
+  return <svg ref={svgRef}></svg>;
 };
 
 export default NeuralNetworkVisualization;
