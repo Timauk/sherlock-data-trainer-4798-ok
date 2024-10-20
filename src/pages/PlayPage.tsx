@@ -11,6 +11,7 @@ import { useGameLogic } from '@/hooks/useGameLogic';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Save, Upload } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -20,6 +21,7 @@ const PlayPage: React.FC = () => {
   const [trainedModel, setTrainedModel] = useState<tf.LayersModel | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
 
   const {
     players,
@@ -58,8 +60,17 @@ const PlayPage: React.FC = () => {
       setCsvDates(data.map(d => d.data));
       addLog("CSV carregado e processado com sucesso!");
       addLog(`Número de registros carregados: ${data.length}`);
+      toast({
+        title: "CSV Carregado",
+        description: `${data.length} registros processados com sucesso.`,
+      });
     } catch (error) {
       addLog(`Erro ao carregar CSV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      toast({
+        title: "Erro ao carregar CSV",
+        description: "Ocorreu um erro ao processar o arquivo.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -67,25 +78,45 @@ const PlayPage: React.FC = () => {
     try {
       await loadModel(file);
       addLog("Modelo Sherlok carregado com sucesso!");
+      toast({
+        title: "Modelo Carregado",
+        description: "O modelo Sherlok foi carregado com sucesso.",
+      });
     } catch (error) {
       addLog(`Erro ao carregar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-      console.error("Detalhes do erro:", error);
+      toast({
+        title: "Erro ao carregar modelo",
+        description: "Ocorreu um erro ao carregar o modelo Sherlok.",
+        variant: "destructive",
+      });
     }
   };
 
   const playGame = useCallback(() => {
     if (csvData.length === 0) {
       addLog("Não é possível iniciar o jogo. Verifique se os dados CSV foram carregados.");
+      toast({
+        title: "Erro ao iniciar o jogo",
+        description: "Carregue os dados CSV antes de iniciar.",
+        variant: "destructive",
+      });
       return;
     }
     setIsPlaying(true);
     addLog("Jogo iniciado.");
-    gameLoop();
-  }, [csvData, gameLoop, addLog]);
+    toast({
+      title: "Jogo Iniciado",
+      description: "O jogo foi iniciado com sucesso.",
+    });
+  }, [csvData, addLog, toast]);
 
   const pauseGame = () => {
     setIsPlaying(false);
     addLog("Jogo pausado.");
+    toast({
+      title: "Jogo Pausado",
+      description: "O jogo foi pausado.",
+    });
   };
 
   const resetGame = () => {
@@ -93,11 +124,19 @@ const PlayPage: React.FC = () => {
     setProgress(0);
     setLogs([]);
     addLog("Jogo reiniciado.");
+    toast({
+      title: "Jogo Reiniciado",
+      description: "O jogo foi reiniciado.",
+    });
   };
 
   const toggleInfiniteMode = () => {
     setIsInfiniteMode(!isInfiniteMode);
     addLog(`Modo infinito ${!isInfiniteMode ? 'ativado' : 'desativado'}.`);
+    toast({
+      title: `Modo Infinito ${!isInfiniteMode ? 'Ativado' : 'Desativado'}`,
+      description: `O modo infinito foi ${!isInfiniteMode ? 'ativado' : 'desativado'}.`,
+    });
   };
 
   useEffect(() => {
