@@ -171,7 +171,10 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
       
       const saveData = {
         modelJSON,
-        weightsData
+        weightsData,
+        historicalData,
+        generation,
+        concursoNumber
       };
       
       const blob = new Blob([JSON.stringify(saveData)], { type: 'application/json' });
@@ -198,8 +201,12 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
         
         setPlayers(prevPlayers => prevPlayers.map(player => ({
           ...player,
-          model: tf.models.modelFromJSON(loadedModel.toJSON())
+          model: loadedModel
         })));
+
+        if (saveData.historicalData) setHistoricalData(saveData.historicalData);
+        if (saveData.generation) setGeneration(saveData.generation);
+        if (saveData.concursoNumber) setConcursoNumber(saveData.concursoNumber);
       } catch (error) {
         console.error("Error loading model:", error);
         // You might want to show an error message to the user here
