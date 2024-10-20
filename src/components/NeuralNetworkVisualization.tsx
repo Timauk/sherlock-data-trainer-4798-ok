@@ -1,4 +1,5 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useMemo } from 'react';
+import { ForceGraph2D } from 'react-force-graph';
 
 interface NeuralNetworkVisualizationProps {
   input: number[];
@@ -7,86 +8,72 @@ interface NeuralNetworkVisualizationProps {
 }
 
 const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({ input, output, weights }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const graphData = useMemo(() => {
+    const nodes = [];
+    const links = [];
+    
+    // Input layer
+    input.forEach((value, i) => {
+      nodes.push({ id: `input-${i}`, val: value, layer: 0 });
+    });
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const drawNetwork = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const layerCount = weights.length + 2;
-      const nodeRadius = 10;
-      const layerWidth = canvas.width / (layerCount + 1);
-      const maxNodesInLayer = Math.max(input.length, ...weights.map(w => w.length), output.length);
-      const layerHeight = canvas.height / (maxNodesInLayer + 1);
-
-      const drawNode = (x: number, y: number, value: number) => {
-        ctx.beginPath();
-        ctx.arc(x, y, nodeRadius, 0, 2 * Math.PI);
-        ctx.fillStyle = `rgba(0, 123, 255, ${Math.abs(value)})`;
-        ctx.fill();
-        ctx.stroke();
-      };
-
-      const drawConnection = (startX: number, startY: number, endX: number, endY: number, weight: number) => {
-        ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
-        ctx.strokeStyle = `rgba(0, 0, 0, ${Math.abs(weight)})`;
-        ctx.lineWidth = Math.abs(weight) * 3;
-        ctx.stroke();
-      };
-
-      // Draw input layer
-      input.forEach((value, i) => {
-        const x = layerWidth;
-        const y = (i + 1) * layerHeight;
-        drawNode(x, y, value);
-      });
-
-      // Draw hidden layers
-      weights.forEach((layer, layerIndex) => {
-        layer.forEach((node, nodeIndex) => {
-          const x = (layerIndex + 2) * layerWidth;
-          const y = (nodeIndex + 1) * layerHeight;
-          drawNode(x, y, node);
-        });
-      });
-
-      // Draw output layer
-      output.forEach((value, i) => {
-        const x = (layerCount) * layerWidth;
-        const y = (i + 1) * layerHeight;
-        drawNode(x, y, value);
-      });
-
-      // Draw connections
-      for (let i = 0; i < layerCount - 1; i++) {
-        const startX = (i + 1) * layerWidth;
-        const endX = (i + 2) * layerWidth;
-        const startNodes = i === 0 ? input : weights[i - 1];
-        const endNodes = i === layerCount - 2 ? output : weights[i];
-
-        startNodes.forEach((_, startIndex) => {
-          const startY = (startIndex + 1) * layerHeight;
-          endNodes.forEach((_, endIndex) => {
-            const endY = (endIndex + 1) * layerHeight;
-            const weight = weights[i][endIndex] || 0.5;
-            drawConnection(startX, startY, endX, endY, weight);
+    // Hidden layers
+    weights.forEach((layer, layerIndex) => {
+      layer.forEach((node, nodeIndex) => {
+        nodes.push({ id: `hidden-${layerIndex}-${nodeIndex}`, val: node, layer: layerIndex + 1 });
+        
+        // Connect to previous layer
+        const prevLayer = layerIndex === 0 ? input : weights[layerIndex - 1];
+        prevLayer.forEach((_, prevIndex) => {
+          links.push({
+            source: layerIndex === 0 ? `input-${prevIndex}` : `hidden-${layerIndex-1}-${prevIndex}`,
+            target: `hidden-${layerIndex}-${nodeIndex}`,
+            value: Math.abs(node)
           });
         });
-      }
-    };
+      });
+    });
 
-    drawNetwork();
+    // Output layer
+    output.forEach((value, i) => {
+      nodes.push({ id: `output-${i}`, val: value, layer: weights.length + 1 });
+      weights[weights.length - 1].forEach((_, nodeIndex) => {
+        links.push({
+          source: `hidden-${weights.length-1}-${nodeIndex}`,
+          target: `output-${i}`,
+          value: Math.abs(value)
+        });
+      });
+    });
+
+    return { nodes, links };
   }, [input, output, weights]);
 
-  return <canvas ref={canvasRef} width={600} height={400} />;
+  return (
+    <div style={{ width: '100%', height: '400px' }}>
+      <ForceGraph2D
+        graphData={graphData}
+        nodeRelSize={5}
+        nodeVal={node => Math.abs(node.val)}
+        nodeColor={node => {
+          if (node.id.startsWith('input')) return 'rgb(0, 255, 0)';
+          if (node.id.startsWith('output')) return 'rgb(255, 0, 0)';
+          return 'rgb(0, 0, 255)';
+        }}
+        linkWidth={link => Math.sqrt(link.value)}
+        linkColor={() => 'rgba(255, 255, 255, 0.2)'}
+        nodeCanvasObject={(node, ctx, globalScale) => {
+          const label = node.id;
+          const fontSize = 12/globalScale;
+          ctx.font = `${fontSize}px Sans-Serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'white';
+          ctx.fillText(label, node.x, node.y);
+        }}
+      />
+    </div>
+  );
 };
 
 export default NeuralNetworkVisualization;

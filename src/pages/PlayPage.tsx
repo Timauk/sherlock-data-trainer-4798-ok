@@ -172,7 +172,7 @@ const PlayPage: React.FC = () => {
           <LogDisplay logs={logs} />
         </div>
 
-        <Card className="flex-1">
+        <Card className="flex-1 mt-4">
           <CardHeader>
             <CardTitle>Visualização da Rede Neural</CardTitle>
           </CardHeader>

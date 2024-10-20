@@ -46,7 +46,6 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
   }, [initializePlayers]);
 
   const analyzeTimeSeries = (data: number[][]) => {
-    // Implementação simplificada de análise de séries temporais
     const movingAverage = data.map((_, index, array) => 
       array.slice(Math.max(0, index - 5), index + 1)
         .reduce((sum, curr) => sum.map((num, i) => num + curr[i]), new Array(15).fill(0))
@@ -84,6 +83,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
       }
     }
     
+    // Update neural network visualization data
     setNeuralNetworkVisualization({ 
       input: recentDraws.flat(),
       output: Array.from(uniqueNumbers),
@@ -143,7 +143,6 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
 
   const evolveGeneration = useCallback(() => {
     setGeneration(prev => prev + 1);
-    // Implementar lógica de evolução mais avançada aqui, se necessário
   }, []);
 
   const calculateDynamicReward = (matches: number, hotNumbers: number[]): number => {
@@ -209,7 +208,6 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
         if (saveData.concursoNumber) setConcursoNumber(saveData.concursoNumber);
       } catch (error) {
         console.error("Error loading model:", error);
-        // You might want to show an error message to the user here
       }
     };
     reader.readAsText(file);
