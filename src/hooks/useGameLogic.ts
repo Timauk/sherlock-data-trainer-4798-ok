@@ -1,13 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { saveAs } from 'file-saver';
-
-interface Player {
-  id: number;
-  score: number;
-  predictions: number[];
-  model: tf.LayersModel;
-}
+import { Player, initializePlayers } from '../utils/playerUtils';
+import { makePrediction, calculateDynamicReward } from '../utils/predictionUtils';
 
 export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel | null) => {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -20,30 +15,9 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
   const [bestPlayer, setBestPlayer] = useState<Player | null>(null);
   const [historicalData, setHistoricalData] = useState<number[][]>([]);
 
-  const createModel = (): tf.LayersModel => {
-    const model = tf.sequential();
-    model.add(tf.layers.lstm({ units: 64, inputShape: [10, 17], returnSequences: true }));
-    model.add(tf.layers.lstm({ units: 32 }));
-    model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
-    model.add(tf.layers.dropout({ rate: 0.2 }));
-    model.add(tf.layers.dense({ units: 15, activation: 'sigmoid' }));
-    model.compile({ optimizer: 'adam', loss: 'binaryCrossentropy' });
-    return model;
-  };
-
-  const initializePlayers = useCallback(() => {
-    const newPlayers: Player[] = Array.from({ length: 10 }, (_, i) => ({
-      id: i + 1,
-      score: 0,
-      predictions: [],
-      model: initialModel ? tf.models.modelFromJSON(initialModel.toJSON()) : createModel()
-    }));
-    setPlayers(newPlayers);
-  }, [initialModel]);
-
   useEffect(() => {
-    initializePlayers();
-  }, [initializePlayers]);
+    setPlayers(initializePlayers(10, initialModel));
+  }, [initialModel]);
 
   const analyzeTimeSeries = (data: number[][]) => {
     const movingAverage = data.map((_, index, array) => 
@@ -64,35 +38,6 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
     return { frequency, hotNumbers };
   };
 
-  const makePrediction = (inputData: number[], playerModel: tf.LayersModel): number[] => {
-    const recentDraws = csvData.slice(-10).map(draw => [...draw, concursoNumber / 3184, Date.now() / (1000 * 60 * 60 * 24 * 365)]);
-    const input = tf.tensor3d([recentDraws]);
-    const predictions = playerModel.predict(input) as tf.Tensor;
-    const result = Array.from(predictions.dataSync());
-    input.dispose();
-    predictions.dispose();
-    
-    const { hotNumbers } = calculateStatistics(historicalData);
-    const uniqueNumbers = new Set<number>();
-    while (uniqueNumbers.size < 15) {
-      if (uniqueNumbers.size < 10) {
-        const num = Math.round(result[uniqueNumbers.size] * 24) + 1;
-        uniqueNumbers.add(num);
-      } else {
-        uniqueNumbers.add(hotNumbers[uniqueNumbers.size - 10]);
-      }
-    }
-    
-    // Update neural network visualization data
-    setNeuralNetworkVisualization({ 
-      input: recentDraws.flat(),
-      output: Array.from(uniqueNumbers),
-      weights: playerModel.getWeights().map(w => Array.from(w.dataSync()))
-    });
-    
-    return Array.from(uniqueNumbers);
-  };
-
   const gameLoop = useCallback(async () => {
     if (csvData.length === 0) return;
 
@@ -103,15 +48,14 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
     const timeSeriesAnalysis = analyzeTimeSeries(historicalData);
     const statistics = calculateStatistics(historicalData);
 
-    const updatedPlayers = players.map(player => {
-      const playerPredictions = makePrediction(currentBoardNumbers, player.model);
+    const updatedPlayers = await Promise.all(players.map(async player => {
+      const playerPredictions = makePrediction(currentBoardNumbers, player.model, concursoNumber, statistics.hotNumbers);
       const matches = playerPredictions.filter(num => currentBoardNumbers.includes(num)).length;
       const reward = calculateDynamicReward(matches, statistics.hotNumbers);
       
-      // Train the model with the current data and time series analysis
       const inputTensor = tf.tensor3d([timeSeriesAnalysis.slice(-10)]);
       const outputTensor = tf.tensor2d([playerPredictions]);
-      player.model.fit(inputTensor, outputTensor, { epochs: 1 });
+      await player.model.fit(inputTensor, outputTensor, { epochs: 1 });
       
       inputTensor.dispose();
       outputTensor.dispose();
@@ -121,7 +65,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
         score: player.score + reward,
         predictions: playerPredictions
       };
-    });
+    }));
 
     setPlayers(updatedPlayers);
     setEvolutionData(prev => [
@@ -138,18 +82,18 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
     );
     setBestPlayer(newBestPlayer);
 
+    setNeuralNetworkVisualization({
+      input: timeSeriesAnalysis[timeSeriesAnalysis.length - 1],
+      output: newBestPlayer.predictions,
+      weights: newBestPlayer.model.getWeights().map(w => Array.from(w.dataSync()))
+    });
+
     setConcursoNumber(prev => prev + 1);
   }, [players, csvData, concursoNumber, generation, historicalData]);
 
   const evolveGeneration = useCallback(() => {
     setGeneration(prev => prev + 1);
   }, []);
-
-  const calculateDynamicReward = (matches: number, hotNumbers: number[]): number => {
-    const baseReward = matches >= 11 && matches <= 15 ? matches - 10 : 0;
-    const hotNumberBonus = matches * hotNumbers.filter(num => boardNumbers.includes(num)).length * 0.1;
-    return baseReward + hotNumberBonus;
-  };
 
   const cloneBestPlayer = () => {
     if (bestPlayer) {
@@ -221,7 +165,6 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
     concursoNumber,
     isInfiniteMode,
     setIsInfiniteMode,
-    initializePlayers,
     gameLoop,
     evolveGeneration,
     neuralNetworkVisualization,

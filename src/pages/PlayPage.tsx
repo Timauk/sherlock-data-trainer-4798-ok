@@ -29,7 +29,6 @@ const PlayPage: React.FC = () => {
     concursoNumber,
     isInfiniteMode,
     setIsInfiniteMode,
-    initializePlayers,
     gameLoop,
     evolveGeneration,
     neuralNetworkVisualization,
