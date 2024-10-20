@@ -91,7 +91,6 @@ const PlayPage: React.FC = () => {
   const resetGame = () => {
     setIsPlaying(false);
     setProgress(0);
-    initializePlayers();
     setLogs([]);
     addLog("Jogo reiniciado.");
   };
