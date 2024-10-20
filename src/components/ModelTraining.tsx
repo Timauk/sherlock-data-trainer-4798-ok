@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import * as tf from '@tensorflow/tfjs';
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { createModel, trainModel, TrainingConfig } from '@/utils/aiModel';
@@ -29,9 +30,10 @@ const ModelTraining: React.FC<ModelTrainingProps> = ({ data, onModelTrained }) =
     try {
       const history = await trainModel(model, data, config);
       onModelTrained(model);
+      const finalLoss = history.history.loss[history.history.loss.length - 1];
       toast({
         title: "Treinamento Concluído",
-        description: `Perda final: ${history.history.loss[history.history.loss.length - 1].toFixed(4)}`
+        description: `Perda final: ${typeof finalLoss === 'number' ? finalLoss.toFixed(4) : 'N/A'}`
       });
     } catch (error) {
       toast({

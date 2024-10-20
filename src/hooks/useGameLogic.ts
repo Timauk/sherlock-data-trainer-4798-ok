@@ -60,7 +60,7 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
       const matches = playerPredictions.filter(num => currentBoardNumbers.includes(num)).length;
       const reward = calculateDynamicReward(matches, statistics.hotNumbers);
       
-      const inputTensor = tf.tensor3d([addDerivedFeatures([timeSeriesAnalysis[timeSeriesAnalysis.length - 1]])[0]]);
+      const inputTensor = tf.tensor3d([[addDerivedFeatures([timeSeriesAnalysis[timeSeriesAnalysis.length - 1]])[0]]]);
       const outputTensor = tf.tensor2d([playerPredictions]);
       await player.model.fit(inputTensor, outputTensor, { epochs: 1 });
       

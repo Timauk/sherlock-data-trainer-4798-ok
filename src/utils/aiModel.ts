@@ -33,8 +33,7 @@ export async function trainModel(
     batchSize: config.batchSize,
     validationSplit: config.validationSplit,
     callbacks: [
-      tf.callbacks.earlyStopping({ monitor: 'val_loss', patience: config.earlyStoppingPatience }),
-      tf.callbacks.tensorBoard({ updateFreq: 'epoch' })
+      tf.callbacks.earlyStopping({ monitor: 'val_loss', patience: config.earlyStoppingPatience })
     ]
   });
 
