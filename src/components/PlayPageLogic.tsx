@@ -5,11 +5,14 @@ import GameControls from '@/components/GameControls';
 import GameBoard from '@/components/GameBoard';
 import LogDisplay from '@/components/LogDisplay';
 import NeuralNetworkVisualization from '@/components/NeuralNetworkVisualization';
+import ModelTraining from '@/components/ModelTraining';
 import { Progress } from "@/components/ui/progress";
 import { useGameLogic } from '@/hooks/useGameLogic';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Save, Upload } from 'lucide-react';
+import { processCSV, extractDateFromCSV } from '@/utils/csvUtils';
+import { addDerivedFeatures, normalizeData } from '@/utils/aiModel';
 
 interface PlayPageLogicProps {
   toast: (props: any) => void;
@@ -49,17 +52,11 @@ export const PlayPageLogic: React.FC<PlayPageLogicProps> = ({ toast, theme, setT
   const loadCSV = async (file: File) => {
     try {
       const text = await file.text();
-      const lines = text.trim().split('\n').slice(1);
-      const data = lines.map(line => {
-        const values = line.split(',');
-        return {
-          concurso: parseInt(values[0], 10),
-          data: new Date(values[1].split('/').reverse().join('-')),
-          bolas: values.slice(2).map(Number)
-        };
-      });
-      setCsvData(data.map(d => d.bolas));
-      setCsvDates(data.map(d => d.data));
+      const data = processCSV(text);
+      const dates = extractDateFromCSV(text);
+      const processedData = addDerivedFeatures(normalizeData(data));
+      setCsvData(processedData);
+      setCsvDates(dates);
       addLog("CSV carregado e processado com sucesso!");
       addLog(`Número de registros carregados: ${data.length}`);
       toast({
@@ -163,6 +160,7 @@ export const PlayPageLogic: React.FC<PlayPageLogicProps> = ({ toast, theme, setT
     <div className="flex flex-wrap gap-4">
       <div className="flex-1">
         <DataUploader onCsvUpload={loadCSV} onModelUpload={loadModelFile} />
+        <ModelTraining data={csvData} onModelTrained={setTrainedModel} />
         <GameControls
           isPlaying={isPlaying}
           onPlay={playGame}

@@ -10,8 +10,10 @@ export interface TrainingConfig {
 export function createModel(): tf.LayersModel {
   const model = tf.sequential();
   model.add(tf.layers.lstm({ units: 64, inputShape: [null, 17], returnSequences: true }));
+  model.add(tf.layers.dropout({ rate: 0.2 }));
   model.add(tf.layers.lstm({ units: 32 }));
-  model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
+  model.add(tf.layers.dropout({ rate: 0.2 }));
+  model.add(tf.layers.dense({ units: 64, activation: 'relu', kernelRegularizer: tf.regularizers.l2({ l2: 0.01 }) }));
   model.add(tf.layers.dropout({ rate: 0.2 }));
   model.add(tf.layers.dense({ units: 15, activation: 'sigmoid' }));
   model.compile({ optimizer: 'adam', loss: 'binaryCrossentropy' });
@@ -30,7 +32,10 @@ export async function trainModel(
     epochs: config.epochs,
     batchSize: config.batchSize,
     validationSplit: config.validationSplit,
-    callbacks: tf.callbacks.earlyStopping({ monitor: 'val_loss', patience: config.earlyStoppingPatience })
+    callbacks: [
+      tf.callbacks.earlyStopping({ monitor: 'val_loss', patience: config.earlyStoppingPatience }),
+      tf.callbacks.tensorBoard({ updateFreq: 'epoch' })
+    ]
   });
 
   xs.dispose();
@@ -59,6 +64,37 @@ export function addDerivedFeatures(data: number[][]): number[][] {
 
   return data.map(row => {
     const frequencies = row.map(n => frequencyMap.get(n) || 0);
-    return [...row, ...frequencies];
+    const dayOfWeek = new Date(row[1]).getDay();
+    const month = new Date(row[1]).getMonth();
+    return [...row, ...frequencies, dayOfWeek, month];
   });
+}
+
+export function crossValidate(model: tf.LayersModel, data: number[][], folds: number): number {
+  const foldSize = Math.floor(data.length / folds);
+  let totalAccuracy = 0;
+
+  for (let i = 0; i < folds; i++) {
+    const validationStart = i * foldSize;
+    const validationEnd = validationStart + foldSize;
+    const validationData = data.slice(validationStart, validationEnd);
+    const trainingData = [...data.slice(0, validationStart), ...data.slice(validationEnd)];
+
+    const trainXs = tf.tensor3d(trainingData.map(row => [row.slice(0, 17)]));
+    const trainYs = tf.tensor2d(trainingData.map(row => row.slice(17)));
+    const valXs = tf.tensor3d(validationData.map(row => [row.slice(0, 17)]));
+    const valYs = tf.tensor2d(validationData.map(row => row.slice(17)));
+
+    model.fit(trainXs, trainYs, { epochs: 1, validationData: [valXs, valYs] });
+
+    const accuracy = model.evaluate(valXs, valYs) as tf.Scalar;
+    totalAccuracy += accuracy.dataSync()[0];
+
+    trainXs.dispose();
+    trainYs.dispose();
+    valXs.dispose();
+    valYs.dispose();
+  }
+
+  return totalAccuracy / folds;
 }
