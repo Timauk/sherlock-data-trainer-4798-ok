@@ -18,11 +18,11 @@ export const createModel = (): tf.LayersModel => {
   return model;
 };
 
-export const initializePlayers = (count: number, initialModel: tf.LayersModel | null): Player[] => {
-  return Array.from({ length: count }, (_, i) => ({
+export const initializePlayers = async (count: number, initialModel: tf.LayersModel | null): Promise<Player[]> => {
+  return Promise.all(Array.from({ length: count }, async (_, i) => ({
     id: i + 1,
     score: 0,
     predictions: [],
-    model: initialModel ? tf.models.modelFromJSON(initialModel.toJSON()) as tf.LayersModel : createModel()
-  }));
+    model: initialModel ? await tf.models.modelFromJSON(initialModel.toJSON()) as tf.LayersModel : createModel()
+  })));
 };

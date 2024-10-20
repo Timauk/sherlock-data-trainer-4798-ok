@@ -16,7 +16,11 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
   const [historicalData, setHistoricalData] = useState<number[][]>([]);
 
   useEffect(() => {
-    setPlayers(initializePlayers(10, initialModel));
+    const initPlayers = async () => {
+      const initializedPlayers = await initializePlayers(10, initialModel);
+      setPlayers(initializedPlayers);
+    };
+    initPlayers();
   }, [initialModel]);
 
   const analyzeTimeSeries = (data: number[][]) => {
@@ -95,13 +99,13 @@ export const useGameLogic = (csvData: number[][], initialModel: tf.LayersModel |
     setGeneration(prev => prev + 1);
   }, []);
 
-  const cloneBestPlayer = () => {
+  const cloneBestPlayer = async () => {
     if (bestPlayer) {
-      const clonedPlayers: Player[] = Array(10).fill(null).map((_, index) => ({
+      const clonedPlayers: Player[] = await Promise.all(Array(10).fill(null).map(async (_, index) => ({
         ...bestPlayer,
         id: index + 1,
-        model: tf.models.modelFromJSON(bestPlayer.model.toJSON()) as tf.LayersModel
-      }));
+        model: await tf.models.modelFromJSON(bestPlayer.model.toJSON()) as tf.LayersModel
+      })));
       setPlayers(clonedPlayers);
     }
   };
